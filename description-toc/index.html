@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <meta name="viewport" content="width=1024, initial-scale=1">
+    <title>АРМ для Системного календаря — Описание приложения</title>
+    <link rel="stylesheet" type="text/css" href="../../../_/css/vendor/pdf.css">
+    <script src="../../../_/js/vendor/toc.js"></script>
+    <script src="../../../_/js/vendor/paged.polyfill.js"></script>
+    <script>
+        class handlers extends Paged.Handler {
+            constructor(chunker, polisher, caller) {
+                super(chunker, polisher, caller);
+            }
+            beforeParsed(content) {
+                createToc({
+                    content: content,
+                    tocElement: '#toc',
+                    titleElements: ['h2:not(.cover-header)', 'h3:not(.cover-header)', 'h4:not(.cover-header)']
+                }); 
+            }
+        }
+        
+        class printPage extends Paged.Handler {
+            constructor(chunker, polisher, caller) {
+                super(chunker, polisher, caller);
+            }
+            afterPreview(pages)	{
+                window.top.postMessage('document generated', window.document.origin)
+                window.print();
+                window.close();
+            }
+        }
+
+
+
+        class TablesColWidth extends Paged.Handler {
+
+            afterPageLayout(pageElement, page, breakToken, chunker) {
+                let tables = pageElement.querySelectorAll("table[data-split-from]");
+
+                tables.forEach((table) => {
+                    let ref = table.dataset.ref;
+                    let sourceTable = pageElement.previousElementSibling.querySelector("[data-ref='" + ref + "']");
+                    // console.log(sourceTable);
+
+                    // clone Header
+
+                    const header = sourceTable.querySelector("thead");
+
+                    if (header) {
+                        let clonedHeader = header.cloneNode(true);
+                        // Insert the header at the start of the split table
+                        table.insertBefore(clonedHeader, table.firstChild);
+                    }
+                    // remove empty cells/row
+                    const emptyParent = sourceTable.closest("table");
+                    const emptyRow = emptyParent.querySelector("tbody tr:last-child")
+
+                    const emptyCells = emptyParent.querySelectorAll("tbody tr:last-child td")
+
+                    emptyCells.forEach(emptyCell => {
+                        if (emptyCell.textContent === "") {
+                            emptyCell.remove();
+                        }
+                        if (emptyRow.textContent === "") {
+                            emptyRow.remove();
+                        }
+
+                    })
+
+                    // keep size of the columns
+
+                    const columnSizes = []
+                    for (const column of sourceTable.rows[0].cells) {
+                        columnSizes.push(column.clientWidth);
+                    }
+                    for (let j = 0; j < table.rows.length; ++j) {
+                        for (let i = 0; i < table.rows[j].cells.length; ++i) {
+                            const column = table.rows[j].cells[i];
+                            column.style.width = columnSizes[i] + "px";
+                        }
+                    }
+                });
+            }
+        }
+
+        Paged.registerHandlers(handlers, printPage, TablesColWidth);
+    </script>
+    <link rel="icon" href="../../../_/img/favicon.png" type="image/png">
+</head>
+
+<body>
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <h1>АРМ для Системного календаря</h1>
+        <h3 class="cover-header no-counter">Описание приложения</h3>
+        <h4 class="cover-header no-counter">Версия 1.0.1</h4>
+        <div class="copyright">© ГК «Иннотех», 2020-<script>document.write(new Date().getFullYear())</script></div>
+    </div>
+    <!-- Table of Contents -->
+    <div class="table-of-contents">
+        <h1 class="toc-header" id="toc-start">Содержание</h1>
+        <ol id="toc"></ol>
+    </div>
+    <!-- Footer -->
+    <p class="footer"><a href="#toc-start">Содержание</a></p>
+    <!-- Page contents -->
+    <div class="sect1">
+<h2 id="app-overview"><a class="anchor" href="#app-overview"></a>Назначение</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Приложение «АРМ для Системного календаря» предоставляет административный веб-интерфейс для настройки системных календарей, используемых продуктовыми приложениями для поддержки принятия решений.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="app-architecture"><a class="anchor" href="#app-architecture"></a>Архитектура</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Приложение построено на микросервисной архитектуре (<a href="#img-arch">Рис. 1</a>).</p>
+</div>
+<div id="img-arch" class="imageblock text-center">
+<div class="content">
+<img src="../_images/description/img-arch.dio.png" alt="img arch.dio" width="90%">
+</div>
+<div class="title">Рис. 1. Aрхитектура приложения</div>
+</div>
+<div class="sect2">
+<h3>Состав компонентов</h3>
+<div class="paragraph">
+<p>Приложение состоит из следующих компонентов:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Название</th>
+<th class="tableblock halign-left valign-top">Тип</th>
+<th class="tableblock halign-left valign-top">Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">adm-web-system-calendar-ui</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Микросервис</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Frontend-часть приложения, реализующая его веб-интерфейс.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">adm-web-system-calendar-bff</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Микросервис</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">BFF-часть приложения, реализующая бизнес-логику веб-интерфейса.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3>Интеграция</h3>
+<div class="paragraph">
+<p>Приложение взаимодействует со следующими внешними системами:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Название</th>
+<th class="tableblock halign-left valign-top">Тип</th>
+<th class="tableblock halign-left valign-top">Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">api-admin-storage</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Приложение</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Приложение «Карточка администратора». Передает микросервису adm-web-system-calendar-bff атрибуты администраторов.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OPA</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Компонент с открытым исходным кодом</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Инструмент применения политик безопасности. Выполняет проверку доступа администратора к конечным точкам API микросервиса adm-web-system-calendar-bff и передает микросервису ее результаты.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">api-system-calendar</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Приложение</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Приложение «Системный календарь». Передает микросервису adm-web-system-calendar-bff данные о системных календарях и операциях над ними.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3>Стек технологий</h3>
+<div class="paragraph">
+<p>При разработке и эксплуатации приложения используются следующие компоненты с открытым исходным кодом:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 33.3333%;">
+<col style="width: 16.6666%;">
+<col style="width: 33.3335%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Название</th>
+<th class="tableblock halign-left valign-top">Описание</th>
+<th class="tableblock halign-left valign-top">Лицензия</th>
+<th class="tableblock halign-left valign-top">Источник</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Java</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Язык программирования</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GNU GPL 2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://www.java.com/ru/download/help/index_using.html">Официальный сайт</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">TypeScript</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Язык программирования</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Apache License 2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://www.typescriptlang.org">Официальный сайт</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Spring Boot</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Фреймворк для создания веб-приложений на Java</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Apache License 2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://spring.io/">Официальный сайт</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Helm</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Менеджер пакетов для Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Apache License 2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://helm.sh/">Официальный сайт</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Kubernetes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Платформа для оркестрации контейнеризированных приложений</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Apache License 2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://kubernetes.io/">Официальный сайт</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gradle</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Система автоматической сборки backend-приложений</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Apache License 2.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://gradle.org/">Официальный сайт</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="features"><a class="anchor" href="#features"></a>Функциональные возможности</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Приложение предоставляет следующие функциональные возможности:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>просмотр списка системных календарей;</p>
+</li>
+<li>
+<p>просмотр системного календаря;</p>
+</li>
+<li>
+<p>создание системного календаря;</p>
+</li>
+<li>
+<p>удаление системного календаря;</p>
+</li>
+<li>
+<p>изменение параметров календаря;</p>
+</li>
+<li>
+<p>изменение параметров дат в календаре.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2>Поддерживаемые интерфейсы</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Приложение предоставляет веб-интерфейс и REST API.</p>
+</div>
+<div class="sect2">
+<h3>Веб-интерфейс</h3>
+<div class="paragraph">
+<p>Для выполнения пользователями с полномочиями администратора операций с системными календарями приложение предоставляет веб-интерфейс, который встраивается в каркас АРМ, реализуемый приложением «АРМ сотрудника банка».</p>
+</div>
+</div>
+<div class="sect2">
+<h3>REST API</h3>
+<div class="paragraph">
+<p>Для интеграционного взаимодействия в приложении используется API-интерфейс, обеспечивающий обмен данными с помощью REST-протокола.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="terms-and-definitions"><a class="anchor" href="#terms-and-definitions"></a>Глоссарий</h2>
+<div class="sectionbody">
+<div class="hdlist">
+<table>
+<tr>
+<td class="hdlist1">
+Attribute-Based Access Control (ABAC)
+</td>
+<td class="hdlist2">
+<p>Модель контроля доступа к объектам, основанная на анализе правил для атрибутов объектов или субъектов, возможных операций с ними и окружения, соответствующего запросу.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Representational State Transfer (REST)
+</td>
+<td class="hdlist2">
+<p>Архитектурный стиль взаимодействия компонентов распределенного приложения в сети.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Продуктовое приложение
+</td>
+<td class="hdlist2">
+<p>Приложение, реализующее бизнес-операции по продаже и обслуживанию банковского продукта или определяющее базовые операции над банковским продуктом.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Справочник продуктов
+</td>
+<td class="hdlist2">
+<p>Справочник названий приложений, которые используют системный календарь.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="acronyms"><a class="anchor" href="#acronyms"></a>Сокращения</h2>
+<div class="sectionbody">
+<div class="hdlist">
+<table>
+<tr>
+<td class="hdlist1">
+API
+</td>
+<td class="hdlist2">
+<p>Application Programming Interface.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+ABAC
+</td>
+<td class="hdlist2">
+<p>Attribute-Based Access Control.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+OPA
+</td>
+<td class="hdlist2">
+<p>Open Policy Agent.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+REST
+</td>
+<td class="hdlist2">
+<p>Representational State Transfer.</p>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</body>
+
+</html>
